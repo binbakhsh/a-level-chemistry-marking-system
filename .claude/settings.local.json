@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(export:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm install:*)",
+      "Bash(curl:*)",
+      "Bash(createdb:*)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(npm run seed:*)",
+      "Bash(npx tsx:*)"
+    ],
+    "deny": []
+  }
+}

@@ -1,0 +1,173 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  password    String
+  firstName   String
+  lastName    String
+  role        UserRole @default(STUDENT)
+  isVerified  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  submissions Submission[]
+  sessions    UserSession[]
+
+  @@map("users")
+}
+
+model UserSession {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_sessions")
+}
+
+model ExamBoard {
+  id          String @id @default(cuid())
+  name        String @unique
+  code        String @unique
+  description String?
+  isActive    Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  papers Paper[]
+
+  @@map("exam_boards")
+}
+
+model Paper {
+  id            String    @id @default(cuid())
+  examBoardId   String
+  code          String
+  title         String
+  subject       String
+  level         String
+  year          Int
+  session       String
+  duration      Int?
+  totalMarks    Int
+  totalQuestions Int?
+  totalSubparts  Int?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  examBoard     ExamBoard @relation(fields: [examBoardId], references: [id])
+  markscheme    Markscheme?
+  submissions   Submission[]
+
+  @@unique([examBoardId, code, year, session])
+  @@map("papers")
+}
+
+model Markscheme {
+  id              String   @id @default(cuid())
+  paperId         String   @unique
+  version         String   @default("1.0")
+  content         Json
+  totalMarks      Int
+  questionCount   Int
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  paper Paper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+
+  @@map("markschemes")
+}
+
+model Submission {
+  id              String           @id @default(cuid())
+  userId          String
+  paperId         String
+  fileName        String
+  filePath        String
+  fileSize        Int
+  status          SubmissionStatus @default(UPLOADED)
+  ocrText         String?
+  extractedData   Json?
+  totalScore      Int?
+  maxScore        Int?
+  percentage      Float?
+  grade           String?
+  feedback        Json?
+  processingTime  Int?
+  errorMessage    String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  user   User  @relation(fields: [userId], references: [id])
+  paper  Paper @relation(fields: [paperId], references: [id])
+  results MarkingResult[]
+
+  @@map("submissions")
+}
+
+model MarkingResult {
+  id            String   @id @default(cuid())
+  submissionId  String
+  questionId    String
+  studentAnswer String?
+  marksAwarded  Int
+  maxMarks      Int
+  feedback      String?
+  markingPoints Json?
+  isCorrect     Boolean
+  confidence    Float?
+  createdAt     DateTime @default(now())
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, questionId])
+  @@map("marking_results")
+}
+
+model SystemLog {
+  id        String    @id @default(cuid())
+  level     LogLevel
+  message   String
+  metadata  Json?
+  timestamp DateTime  @default(now())
+  userId    String?
+  ip        String?
+  userAgent String?
+
+  @@map("system_logs")
+}
+
+enum UserRole {
+  STUDENT
+  TEACHER
+  ADMIN
+}
+
+enum SubmissionStatus {
+  UPLOADED
+  PROCESSING
+  OCR_COMPLETE
+  MARKING
+  MARKING_COMPLETE
+  FAILED
+}
+
+enum LogLevel {
+  ERROR
+  WARN
+  INFO
+  DEBUG
+}
